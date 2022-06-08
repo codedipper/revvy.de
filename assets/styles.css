@@ -1,4 +1,4 @@
-/* https://bestmotherfucking.website/ */
+/* Majority of CSS "borrowed" from: https://bestmotherfucking.website/ */
 body {
 	margin: 1em auto;
 	max-width: 40em;
@@ -8,9 +8,17 @@ body {
 	background: #1c1c1c;
 }
 
+.computers {
+	display: flex;
+	border: 1px solid green;
+	padding: 15px;
+}
+
 a:link { color: #cdf; }
 a:hover, a:visited:hover { color: #def; }
 a:visited { color: #dcf; }
+
 img { padding-right: 20px; }
+
 h1, h2, h3 { line-height: 1.2; }
 hr { border: 2px solid darkblue; }
