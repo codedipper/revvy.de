@@ -14,6 +14,8 @@ body {
 	padding: 15px;
 }
 
+.banner { background-color: darkred; padding-left: 15px;}
+
 a:link { color: #cdf; }
 a:hover, a:visited:hover { color: #def; }
 a:visited { color: #dcf; }
