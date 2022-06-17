@@ -5,7 +5,7 @@ body {
 	padding: .62em 18%;
 	font: 1.2em/1.62 sans-serif;
 	color: #fff;
-	background: #1c1c1c;
+	background: #151516;
 }
 
 .computers {
@@ -25,4 +25,4 @@ h1, h2, h3 { line-height: 1.2; }
 hr { border: 2px solid darkblue; }
 
 i { color: red; }
-i:hover { color: #5c85d6; }
+i:hover { color: blue; }
