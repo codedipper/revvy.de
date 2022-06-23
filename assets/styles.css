@@ -10,8 +10,7 @@ body {
 
 .computers {
 	display: flex;
-	border: 1px solid green;
-	padding: 15px;
+	padding: 5px;
 }
 
 a:link { color: #cdf; }
