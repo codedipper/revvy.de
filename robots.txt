@@ -1,0 +1,5 @@
+User-Agent: *
+Disallow:
+
+Host: https://revvy.de/
+Sitemap: https://revvy.de/sitemap.xml

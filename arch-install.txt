@@ -1,0 +1,350 @@
+Installing Arch Linux with microcodes, GPT, systemd-boot w/EFI, TPM 2.0, secure boot, LUKS and LVM, encrypted swapfile, Btrfs, unprivileged users, doas, Ethernet, DNS over TLS w/caching, network time synchronisation, ufw and a Wayland GNOME, X11 XFCE desktop environment or X11 Openbox window manager.
+This guide is specifically tailored to my system and its particular configuration with minimal bloat.
+
+Download the liveboot ISO or build it:
+https://archlinux.org/download/
+https://wiki.archlinux.org/title/Archiso
+
+Boot from the ISO. # if using secure boot, disable it for now
+
+Set keyboard layout:
+localectl list-keymaps # choose one
+loadkeys us
+
+Set a console font:
+ls /usr/share/kbd/consolefonts/ # choose one
+setfont default8x16
+
+Be sure you are using UEFI:
+cat /sys/firmware/efi/fw_platform_size # should output 64 or 32
+# use another bootloader like limine if using BIOS booting
+
+If using UEFI, check TPM 2.0 support:
+cat /sys/class/tpm/tpm*/tpm_version_major # should output 2
+
+# TPM should work automatically with the Linux kernel
+# we will not store our disk encryption keys inside our TPM, for reasons:
+# https://wiki.archlinux.org/title/Trusted_Platform_Module
+
+Connect to the internet, should be automatic with ethernet; Check connection:
+ip addr
+ping revvy.de
+
+Make sure system clock is synced:
+timedatectl
+
+Choose your disk!
+fdisk -l
+
+Create your partitions: (destructive!!!!!)
+# we will create a 1GB (300 MB minimum) boot partition and rest of the drive will be LUKS
+fdisk /dev/vdX
+g
+n
+(default)
+(default)
++1G
+n
+(default)
+(default)
+(default)
+t
+1
+1
+t
+2
+44
+w
+
+Setup LUKS partitions: (destructive!!!!!)
+# we will create a 16G (or twice ram amount) swap partition and rest of the partition will be our root partition
+cryptsetup luksFormat /dev/XdX2
+cryptsetup open /dev/XdX2 cryptlvm
+pvcreate /dev/mapper/cryptlvm
+vgcreate grouplvm /dev/mapper/cryptlvm
+lvcreate -L 16G -n swap grouplvm
+lvcreate -l 100%FREE -n root grouplvm
+lvreduce -L -256M grouplvm/root # only if formatting partition to ext4
+
+Format partitions: (destructive!!!!!)
+mkfs.btrfs /dev/grouplvm/root # i'd use probably use ext4 because I have an irrational fear
+mkswap /dev/grouplvm/swap
+mkfs.fat -F 32 /dev/XdXx
+
+Mount partitions:
+mount /dev/grouplvm/root /mnt
+mount --mkdir /dev/XdXx /mnt/boot
+swapon /dev/grouplvm/swap
+
+Install packages:
+pacstrap -K /mnt base base-devel linux lvm2 linux-firmware-intel intel-ucode vi doas ufw sbctl
+# base-devel is useful for building packages and compiling from source
+# linux can be substituted for another kernel
+# lvm2 is only used for encryption
+# install only the firmware you need, or the full package linux-firmware; not required in a virtual machine
+# only install the microcodes for your correct CPU vendor, if not in a virtual machine
+# vi can be substituted with another console text editor, like nano
+# it is possible to not install a text editor to complete the setup, but you will probably install it after anyway and it makes it much easier to complete the setup
+# doas is optional
+# ufw is optional but firewalls are good
+# sbctl will be used for secure boot configuration
+# therefore the only truly required packages are base and a kernel
+
+Generate fstab:
+genfstab -U /mnt >> /mnt/etc/fstab
+vim /mnt/etc/fstab # uid=0,gid=0,fmask=0077,dmask=0077,umask=0077
+# the above settings must be applied to the boot parition, replacing any duplicate settings there before
+systemctl daemon-reload
+mount -o remount,... /mnt/boot # add other options here
+
+Chroot into your system!
+arch-chroot /mnt
+
+Edit mirrorlist:
+reflector -c CA -p https,http --save /etc/pacman.d/mirrorlist # choose country
+vi /etc/pacman.d/mirrorlist
+
+Time:
+ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime # choose your real timezone
+hwclock --systohc --utc
+
+Locale:
+vi /etc/locale.gen # edit for required locales
+locale-gen
+vi /etc/locale.conf # LANG=en_US.UTF-8
+
+Console font/keymap:
+vi /etc/vconsole.conf # FONT=default8x16 KEYMAP=us
+
+Networking:
+vi /etc/hostname # set any hostname
+vi /etc/hosts:
+
+127.0.0.1 localhost
+127.0.0.1 localhost.localdomain
+127.0.0.1 local
+10.0.0.255 broadcasthost
+::1 localhost
+::1 ip6-localhost
+::1 ip6-loopback
+ff00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+ff02::3 ip6-allhosts
+0.0.0.0 0.0.0.0
+
+127.0.1.1 HOSTNAME.localdomain HOSTNAME
+10.0.0.46 HOSTNAME.localdomain HOSTNAME
+
+Regenerate kernel with LUKS support, among other things:
+vi /etc/mkinitcpio.conf # Check order, it's important!
+HOOKS systemd keyboard sd-encrypt lvm2 sd-vconsole
+
+IN THIS ORDER: HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt lvm2 filesystems fsck)
+
+mkinitcpio -P
+
+Set user password + doas:
+passwd # root
+useradd -mg wheel user
+passwd user
+vi /etc/doas.conf # permit nolog keepenv :wheel as root, check manpages for other options
+
+systemd-boot:
+bootctl install # ignore the error that comes up here, it will be fixed on our real system (see previous fstab file configuration)
+mkdir -p /etc/pacman.d/hooks
+vi /etc/pacman.d/hooks/95-systemd-boot.hook
+
+[Trigger]
+Type = Package
+Operation = Upgrade
+Target = systemd
+
+[Action]
+Description = Gracefully upgrading systemd-boot...
+When = PostTransaction
+Exec = /usr/bin/systemctl restart systemd-boot-update.service
+
+vi /boot/loader/loader.conf
+
+default  arch.conf
+timeout  1
+console-mode max
+editor   no
+
+blkid >> /boot/loader/entries/arch.conf # remove all output generated by this file once you're done
+vi /boot/loader/entries/arch.conf # both UUIDs must be of /dev/XdX2 parition, not grouplvm or cryptlvm
+# again, only use microcodes for your correct CPU vendor
+
+title   Arch Linux
+linux   /vmlinuz-linux
+initrd  /intel-ucode.img
+initrd  /initramfs-linux.img
+options root=UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx rw
+options rd.luks.name=xxxxxxxxx=cryptlvm root=/dev/grouplvm/root
+
+cp /boot/loader/entries/arch.conf /boot/loader/entries/arch-fallback.conf
+vi /boot/loader/entries/arch-fallback.conf
+# change these options:
+
+title   Arch Linux (fallback initramfs)
+initrd  /initramfs-linux-fallback.img
+
+Ethernet: (systemd-networkd)
+ip link # use correct interface in "Name" option
+vi /etc/systemd/network/20-wired.network
+# if you're using a different static ip/gateway/dns, change it
+
+[Match]
+Name=enXxXx
+
+[Network]
+Address=10.0.0.46/24
+Address=2001:db8:1234:5678::2/64
+Gateway=10.0.0.1
+Gateway=fe80::
+DNS=65.21.180.223
+DNS=2a01:4f9:c010:a91c::1
+
+# OR DHCP configuration
+
+[Match]
+Name=enXxXx
+
+[Link]
+RequiredForOnline=routable
+
+[Network]
+DHCP=yes
+
+Network Time Synchronisation: (systemd-timesyncd)
+mkdir -p /etc/systemd/timesyncd.conf.d
+vi /etc/systemd/timesyncd.conf.d/local.conf # if my server doesn't work, i would just use default servers
+
+[Time]
+NTP=2a01:4f9:c010:a91c::1 65.21.180.223
+FallbackNTP=0.arch.pool.ntp.org 1.arch.pool.ntp.org 2.arch.pool.ntp.org 3.arch.pool.ntp.org
+
+DNS over TLS: (systemd-resolved)
+mkdir -p /etc/systemd/resolved.conf.d
+
+vi /etc/systemd/resolved.conf.d/local.conf # if my server doesn't work, i would normally use Mullvad DNS:
+# https://mullvad.net/en/help/dns-over-https-and-dns-over-tls#specifications
+# supposedly DNSSEC in systemd-resolved is unstable, but I haven't had any issues
+# fully enabling dnssec may cause randomly failed names
+
+[Resolve]
+DNS=2a01:4f9:c010:a91c::1#dns.revvy.de
+DNS=65.21.180.223#dns.revvy.de
+FallbackDNS=
+Domains=~.
+DNSOverTLS=yes
+DNSSEC=allow-downgrade
+
+Enable everything:
+systemctl enable systemd-networkd.service systemd-timesyncd.service systemd-resolved.service ufw.service
+
+Logout:
+exit
+umount -R /mnt
+swapoff /dev/grouplvm/swap
+vgchange -a n grouplvm
+cryptsetup close cryptlvm
+reboot
+
+Boot into your system!
+
+Fix systemd-resolved symlink:
+systemctl stop systemd-resolved.service
+rm /etc/resolv.conf
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+systemctl start systemd-resolved.service
+
+Start and configure ufw:
+ufw default deny
+ufw enable
+
+Secure Boot:
+sbctl status
+sbctl create-keys
+sbctl enroll-keys -m
+sbctl sign -s /boot/vmlinuz-linux
+sbctl sign -s /boot/EFI/BOOT/BOOTX64.EFI
+sbctl sign -s /boot/EFI/systemd/systemd-bootx64.efi
+sbctl sign -s -o /usr/lib/systemd/boot/efi/systemd-bootx64.efi.signed /usr/lib/systemd/boot/efi/systemd-bootx64.efi
+sbctl sign-all -g
+pacman -S systemd sbctl
+reboot
+# re-enable secure boot
+
+Check everything works:
+doas su
+ufw status verbose
+timedatectl
+timedatectl timesync-status
+resolvectl
+sbctl status
+pacman -Syu
+
+Wayland graphical environment (GNOME):
+# this is great for a future-proofed setup (Wayland, pipewire) and non-technical user who wants minimal issues
+# but if you're a non-technical user, install Debian?
+pacman -Sy gdm gnome-calculator gnome-color-manager gnome-console gnome-control-center gnome-disk-utility gnome-font-viewer gnome-keyring gnome-menus gnome-session gnome-settings-daemon gnome-shell gnome-user-docs grilo-plugins gvfs gvfs-mtp gvfs-nfs loupe nautilus snapshot sushi tecla xdg-desktop-portal-gnome xdg-user-dirs-gtk yelp gnome-backgrounds pipewire-jack
+system enable gdm.service
+
+If you start gdm and receive a black screen or cursor, try:
+https://bbs.archlinux.org/viewtopic.php?pid=1943755#p1943755
+https://bbs.archlinux.org/viewtopic.php?pid=1943845#p1943845
+
+You may have to login manually first or else gdm will fail to login (?)
+XDG_SESSION_TYPE=wayland dbus-run-session gnome-session
+
+From then on it should be safe to reboot with gdm enabled.
+
+X11 graphical environment (XFCE):
+# i love xfce, sometimes it's nice having a setup that looks good in screenshots
+pacman -Sy exo garcon thunar tumbler xfce4-appfinder xfce4-panel xfce4-session xfce4-settings xfconf xfdesktop xfwm4 xfwm4-themes xfce4-dict xfce4-netload-plugin xfce4-notifyd xfce4-pulseaudio-plugin xfce4-screenshooter xfce4-systemload-plugin xfce4-weather-plugin pulseaudio pulseaudio-alsa pulseaudio-jack bash-completion jack2 xorg-server xorg-xcalc xf86-video-vesa xorg-bdftopcf xorg-font-util xorg-fonts-encodings xorg-iceauth xorg-mkfontscale xorg-server-common xorg-server-xephyr xorg-server-xnest xorg-server-xvfb xorg-sessreg xorg-setxkbmap xorg-smproxy xorg-x11perf xorg-xauth xorg-xcmsdb xorg-xcursorgen xorg-xdpyinfo xorg-xdriinfo xorg-xev xorg-xgamma xorg-xhost xorg-xinput xorg-xkbcomp xorg-xkbevd xorg-xkbutils xorg-xlsatoms xorg-xmodmap xorg-xpr xorg-xprop xorg-xrandr xorg-xrdb xorg-xrefresh xorg-xset xorg-xvinfo xorg-xwd xorg-xwud gvfs
+cat /etc/X11/xinit/xinitrc.d/* > /home/user/.xinitrc
+echo "exec startxfce4" >> /home/user/.xinitrc
+startx
+
+X11 graphical environment (Openbox):
+# i love openbox, i can do whatever i want with it and i don't need a mouse
+# very low resource usage (~200 MB RAM idle)
+pacman -Sy openbox ttf-liberation xorg-xinit xorg-server
+cat /etc/X11/xinit/xinitrc.d/* > /home/user/.xinitrc
+echo "exec openbox-session" >> /home/user/.xinitrc
+mkdir -p ~/.config/openbox
+cp -a /etc/xdg/openbox ~/.config/ # who uses unconfigured openbox?
+startx
+
+Clean up home folder:
+# I NEED MY CLEAN HOME FOLDER A A A A A A A A A
+# but if you have any compatibility issues, just reverse the changes you made
+# some of the files being linked here may or may not exist
+mv $HOME/.xinitrc $HOME/.local/share/xorg/xinitrc
+ln -sf $HOME/.local/share/xorg/xinitrc $HOME/.xinitrc
+
+mkdir -p $HOME/.local/share/bash
+mkdir -p $HOME/.config/bash
+
+cp -r $HOME/.cache $HOME/.local/share/cache 
+ln -sf $HOME/.local/share/cache $HOME/.cache
+
+echo "HISTFILE=$HOME/.local/share/bash/bash_history" >> $HOME/.bashrc
+
+cp $HOME/.bash_logout $HOME/.config/bash/bash_logout
+ln -sf $HOME/.config/bash/bash_logout $HOME/.bash_logout
+cp $HOME/.bashrc $HOME/.config/bash/bashrc
+ln -sf $HOME/.config/bash/bashrc $HOME/.bashrc
+ln -sf $HOME/.config/bash/bashrc $HOME/.bash_profile
+
+# you're done installing arch linux!
+# this guide is just a baseline for how i install my system, even though some steps can be modified to fit any setup
+# i suggest you make your own to fit your needs and make a dotfiles repository (i don't have one because i'm lazy)
+# some ideas for what to do next:
+# install an aur helper (try paru, it's probably the best and made by an arch contributor): https://aur.archlinux.org/packages/paru
+# make an auto-update script
+# install a good web browser: https://mullvad.net/en/download/browser
+# thank you for having the courage to install arch, if you need any help feel free to send me an email!
