@@ -30,7 +30,7 @@ element.revvybrr6pvbx4n3j4475h4ghw4elqr4t5xo2vtd3gfpu2nrsnhh57id.onion
 
 # Network Information (return 200 "$remote_addr\n$http_user_agent\n$server_protocol";)
 revvy.de/ip
-ip.revvy.de/ip
+ip.revvy.de/ip # Plaintext HTTP available
 ip.revvy.de
 ip4.revvy.de
 ip6.revvy.de
@@ -52,17 +52,17 @@ revvy.de#2759/udp
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEeXoXH9V4kV90rOTtGEbeNpkIWScFAmigc/MACgkQGEbeNpkI
-WSfCRg/9FF/fpV6L+Wf/RHkWsZwWwzYnCc4qI2CqQHOoaMq+wocjQpa7QIM1MXKB
-sso7m8guPJDHo8DSHVJOepl+VVhqT0gnNPj+cFQY2wrd8zQ/ChZr3kxUxe6CkUMl
-IT+QmxMr00DC3SI0Nuv6VsIz5QvdAq+o7DQpM2f5mLz0xR0Ha3rL5IqVL9WttQ9K
-PRFEvneBjAFsib0xvy6IHDR/XeTH86mNAYlq8wiTRRw22PBE5DjbPfkdaTxKbOy2
-MzYqeVumAwJSVyJowHZcTpvr6Qubxna1IJVP5JRpdrWek9tSkODg7OeOcJdfEVoJ
-mE75tL2GCqEogjD9VufKdiX3xG9rEBDP3SDzDjlHMjr2acBCjcjBuT/vqruhlZJF
-CKhE76nHda1igLIGfnYbsQ23dvup3tn1icO9jAH41t9zX4ij+p28e+2y9RznOEJJ
-qY3dpVU1Ucluh8q7fELFKKugWyf2Bb9gDZo5rcg96IlqyMrRYpk3KRkIYZEx03FK
-bzamakciUZ2tMkqYLvswo6h7dJCMRYcbA2UA7szk/i6bXqRHbCLAwbYHGOkNasfI
-v0DwnOcwrIwhhsbZJjhoX0MIN7LDNlR0sCNOmmu8kmLhHBicO2CdAEg/00thklWB
-ugJwFaAk4TnS3fKV9ULlLxJkt/+N3zSkIe/MavcamhgQd60GTdU=
-=v8y0
+iQIzBAEBCgAdFiEEeXoXH9V4kV90rOTtGEbeNpkIWScFAmii1ZgACgkQGEbeNpkI
+WSfDfw//R/cW+E6he18LWw5jWOHqDY7AMnzzR9+IjtJw1Vy+hDggHrNj7E8gv9ix
+JEmp6evSxme5ThlfCQ9gq0V2TW7DmRJ2l3T5dobjk6EuFEwUeJd9f2SBRDYo8ufy
+GsiM+jaFlgXGbp1RnV/x5B7WZE88JdzElzycKW1Awa4iqAEXKlaAEDFigYBQjntM
+agrRXoX4W4FPIy3Hej98DsOW79I9zoGnnIaclWArRdOuTquaagD2pwJTME74+Z9Z
+GlQa8G+1NwwQAvluvTIpksvnjh1jt41A6x+11LXcnRHqZiHOwa8B3HZOL+no9RjH
+G0ZwhT+xxFH0PVgpfI847xkumzCwAnMs++huiNLlI5aeVfqu0x7QbtveNHkfhisy
+NmGN1+cycalUtaVFH78NocGY8bZ6qwJ0Av6G5JTnRBRfcmQV2y9ksDmrNNbtO2nH
+xDXFbA0ZFL38psR9rie+uTE6qcDmuIwPKNZAFVIoTJY17QpMEVR/eyh8o1rC5axe
+ri9k2k+4+q/oF3wJLwkGDHtHgyhQdzImXU8VVHzhL7o+hbc8YDxnBaKydUt1Rtrs
+wpol5dkmnNlfru1MPxlLtRFDrlU9Ask8726yHo0fmhOQ84jwOJqzaeHgteLpiTTr
+YbaB4PeL0RjnNBuu8xEhQJ0+x+blXYpHf6v6AoI312yaGSMWyWY=
+=7LAx
 -----END PGP SIGNATURE-----
